@@ -496,6 +496,15 @@ select {
   padding: 8px 12px;
 }
 
+.eliminate-btn {
+  margin-top: 0;
+  width: auto;
+  flex-shrink: 0;
+  background: #b91c1c;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
 .timer-bar {
   position: fixed;
   left: 50%;

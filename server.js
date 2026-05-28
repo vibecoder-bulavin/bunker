@@ -548,6 +548,15 @@ io.on("connection", (socket) => {
     broadcastState();
   });
 
+  socket.on("host:eliminate-player", (targetId) => {
+    if (!assertHost(socket, "исключение игрока")) return;
+    const target = state.players.get(targetId);
+    if (!target || !target.isAlive) return;
+    target.isAlive = false;
+    setupTurns();
+    broadcastState();
+  });
+
   socket.on("host:start-game", () => {
     if (!assertHost(socket, "старт игры")) return;
     if (state.players.size < 2) {
@@ -703,9 +712,9 @@ io.on("connection", (socket) => {
     state.roundMode = "discussion";
     state.voting.active = true;
     state.voting.votes = {};
-    state.voting.endsAt = Date.now() + 60_000;
+    state.voting.endsAt = Date.now() + 30_000;
     clearVotingTimer();
-    votingTimeout = setTimeout(endVoting, 60_000);
+    votingTimeout = setTimeout(endVoting, 30_000);
     broadcastState();
   });
 

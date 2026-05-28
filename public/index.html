@@ -50,13 +50,17 @@
               <button id="modeRevealBtn">Круг: вскрытие</button>
               <button id="modeDiscussionBtn">Круг: обсуждение</button>
               <button id="nextTurnBtn">Следующий ход</button>
-              <button id="startVotingBtn">Голосование (60с)</button>
+              <button id="startVotingBtn">Голосование (30с)</button>
               <button id="restartBtn">Перезапуск</button>
             </div>
             <div class="row wrap">
               <button class="timer-btn" data-seconds="30">Таймер 30с</button>
               <button class="timer-btn" data-seconds="45">Таймер 45с</button>
               <button class="timer-btn" data-seconds="60">Таймер 60с</button>
+            </div>
+            <div id="eliminatePanel" class="revive-panel">
+              <label>Исключить игрока</label>
+              <div id="eliminateList" class="revive-list"></div>
             </div>
             <div id="revivePanel" class="revive-panel">
               <label>Вернуть игрока в игру</label>

@@ -38,6 +38,7 @@ const playersTable = document.getElementById("playersTable");
 const lobbyPlayers = document.getElementById("lobbyPlayers");
 const hostControls = document.getElementById("hostControls");
 const reviveList = document.getElementById("reviveList");
+const eliminateList = document.getElementById("eliminateList");
 const packChips = document.getElementById("packChips");
 const startGameBtn = document.getElementById("startGameBtn");
 const nextTurnBtn = document.getElementById("nextTurnBtn");
@@ -294,6 +295,37 @@ function renderPackChips(state) {
       renderPackChips(state);
     });
     packChips.append(chip);
+  }
+}
+
+function renderEliminatePanel(state) {
+  if (!eliminateList) return;
+  eliminateList.innerHTML = "";
+  const isHost = state.meId === state.hostId;
+  if (!isHost) return;
+
+  const alive = state.players.filter((player) => player.isAlive);
+  if (!alive.length) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "Нет игроков для исключения.";
+    eliminateList.append(empty);
+    return;
+  }
+
+  for (const player of alive) {
+    const row = document.createElement("div");
+    row.className = "revive-row";
+    const name = document.createElement("span");
+    name.textContent = player.nickname;
+    const btn = document.createElement("button");
+    btn.className = "eliminate-btn";
+    btn.textContent = "Исключить";
+    btn.addEventListener("click", () => {
+      socket.emit("host:eliminate-player", player.id);
+    });
+    row.append(name, btn);
+    eliminateList.append(row);
   }
 }
 
@@ -681,6 +713,7 @@ socket.on("state:update", (state) => {
   }
   claimHostBtn.classList.toggle("hidden", isHost || Boolean(state.hostId));
   if (adminLobbyHint) adminLobbyHint.classList.toggle("hidden", !isHost);
+  renderEliminatePanel(state);
   renderRevivePanel(state);
   renderPackChips(state);
 
