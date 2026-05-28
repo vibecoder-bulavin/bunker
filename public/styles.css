@@ -460,12 +460,40 @@ select {
   color: #fcd34d;
 }
 
+.revive-panel {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid #374151;
+}
+
+.revive-list {
+  display: grid;
+  gap: 8px;
+}
+
+.revive-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #0f172a;
+  border: 1px solid #374151;
+  border-radius: 8px;
+}
+
+.revive-row span {
+  font-weight: 700;
+}
+
 .revive-btn {
-  margin-top: 8px;
-  width: 100%;
+  margin-top: 0;
+  width: auto;
+  flex-shrink: 0;
   background: #15803d;
   font-size: 13px;
-  padding: 8px 10px;
+  padding: 8px 12px;
 }
 
 .timer-bar {

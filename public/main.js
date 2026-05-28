@@ -37,6 +37,7 @@ const myActionCard = document.getElementById("myActionCard");
 const playersTable = document.getElementById("playersTable");
 const lobbyPlayers = document.getElementById("lobbyPlayers");
 const hostControls = document.getElementById("hostControls");
+const reviveList = document.getElementById("reviveList");
 const packChips = document.getElementById("packChips");
 const startGameBtn = document.getElementById("startGameBtn");
 const nextTurnBtn = document.getElementById("nextTurnBtn");
@@ -293,6 +294,37 @@ function renderPackChips(state) {
       renderPackChips(state);
     });
     packChips.append(chip);
+  }
+}
+
+function renderRevivePanel(state) {
+  if (!reviveList) return;
+  reviveList.innerHTML = "";
+  const isHost = state.meId === state.hostId;
+  if (!isHost) return;
+
+  const eliminated = state.players.filter((player) => !player.isAlive);
+  if (!eliminated.length) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "Нет выбывших игроков.";
+    reviveList.append(empty);
+    return;
+  }
+
+  for (const player of eliminated) {
+    const row = document.createElement("div");
+    row.className = "revive-row";
+    const name = document.createElement("span");
+    name.textContent = player.nickname;
+    const reviveBtn = document.createElement("button");
+    reviveBtn.className = "revive-btn";
+    reviveBtn.textContent = "Вернуть в игру";
+    reviveBtn.addEventListener("click", () => {
+      socket.emit("host:revive-player", player.id);
+    });
+    row.append(name, reviveBtn);
+    reviveList.append(row);
   }
 }
 
@@ -649,6 +681,7 @@ socket.on("state:update", (state) => {
   }
   claimHostBtn.classList.toggle("hidden", isHost || Boolean(state.hostId));
   if (adminLobbyHint) adminLobbyHint.classList.toggle("hidden", !isHost);
+  renderRevivePanel(state);
   renderPackChips(state);
 
   circleStatus.textContent = state.circleStatus || "";
