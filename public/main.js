@@ -50,6 +50,8 @@ const turnOpenInfo = document.getElementById("turnOpenInfo");
 const circleStatus = document.getElementById("circleStatus");
 const effectInfo = document.getElementById("effectInfo");
 const publicActionInfo = document.getElementById("publicActionInfo");
+const actionLogEl = document.getElementById("actionLog");
+const actionBanner = document.getElementById("actionBanner");
 const voteInfo = document.getElementById("voteInfo");
 const modeRevealBtn = document.getElementById("modeRevealBtn");
 const modeDiscussionBtn = document.getElementById("modeDiscussionBtn");
@@ -71,6 +73,8 @@ let lastSpeakerId = null;
 let lastPhase = null;
 let lastTimerKey = "none";
 let lastCountdownSecond = null;
+let lastActionAt = null;
+let actionBannerTimeout = null;
 const packTitles = {
   classic: "Классика",
   science: "Научный",
@@ -291,6 +295,61 @@ function renderPackChips(state) {
   }
 }
 
+function formatActionLine(entry) {
+  if (entry.targetName) {
+    return `${entry.actorName} → ${entry.targetName}: «${entry.actionTitle}»`;
+  }
+  return `${entry.actorName}: «${entry.actionTitle}»`;
+}
+
+function showActionBanner(entry) {
+  if (!entry || !actionBanner) return;
+  actionBanner.innerHTML = `
+    <div class="action-banner-title">Использовано действие</div>
+    <div class="action-banner-text">${formatActionLine(entry)}</div>
+    <div class="action-banner-desc">${entry.description || ""}</div>
+  `;
+  actionBanner.classList.remove("hidden");
+  if (actionBannerTimeout) clearTimeout(actionBannerTimeout);
+  actionBannerTimeout = setTimeout(() => {
+    actionBanner.classList.add("hidden");
+  }, 8000);
+}
+
+function renderActionLog(state) {
+  if (!actionLogEl) return;
+  actionLogEl.innerHTML = "";
+  const log = state.actionLog || [];
+  if (!log.length) {
+    const empty = document.createElement("li");
+    empty.className = "hint";
+    empty.textContent = "Пока никто не использовал карты действий.";
+    actionLogEl.append(empty);
+    return;
+  }
+  for (const entry of log) {
+    const item = document.createElement("li");
+    item.className = "prop-line action-log-item";
+    const title = document.createElement("div");
+    title.className = "action-log-title";
+    title.textContent = formatActionLine(entry);
+    const meta = document.createElement("div");
+    meta.className = "action-log-meta";
+    meta.textContent = entry.targetName
+      ? `Игрок ${entry.actorName} применил на ${entry.targetName}`
+      : `Игрок ${entry.actorName} применил на себя`;
+    const desc = document.createElement("div");
+    desc.className = "action-log-desc";
+    desc.textContent = entry.description || "";
+    item.append(title, meta, desc);
+    actionLogEl.append(item);
+  }
+}
+
+function getPlayerLastAction(state, nickname) {
+  return (state.actionLog || []).find((entry) => entry.actorName === nickname) || null;
+}
+
 function remainingText(endAt) {
   if (!endAt) return "";
   const sec = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
@@ -465,10 +524,22 @@ function renderTable(state) {
     const title = document.createElement("h3");
     title.textContent = player.nickname;
 
-    const props = document.createElement("div");
-    props.className = "props";
+    const usedAction = getPlayerLastAction(state, player.nickname);
+    if (usedAction) {
+      const usedBox = document.createElement("div");
+      usedBox.className = "player-action-used";
+      usedBox.textContent = `⚡ Действие: «${usedAction.actionTitle}»${
+        usedAction.targetName ? ` → ${usedAction.targetName}` : ""
+      }`;
+      row.append(title, usedBox);
+    } else {
+      row.append(title);
+    }
+
+    const props = document.createElement("ul");
+    props.className = "props props-bullets";
     for (const key of cardKeys) {
-      const line = document.createElement("div");
+      const line = document.createElement("li");
       line.className = "prop-line";
       const label = document.createElement("div");
       label.className = "prop-label";
@@ -478,19 +549,28 @@ function renderTable(state) {
       value.textContent = player[key] || "Закрыто";
       if (!player[key]) value.classList.add("locked");
       if (state.lastReveal?.playerId === player.id && state.lastReveal?.propertyName === key) {
-        value.classList.add("reveal-highlight");
+        line.classList.add("reveal-highlight");
       }
       line.append(label, value);
       props.append(line);
     }
 
-    const statuses = document.createElement("div");
-    statuses.className = "hint";
-    statuses.textContent = `Действие: ${player.actionUsed ? "использовано" : "готово"} | Молчание: ${
-      player.silencedTurns || 0
-    } | Бонусы: ${player.bonusRevealCredits || 0} | Голосов против: ${voteCounts[player.id] || 0}`;
+    const statuses = document.createElement("ul");
+    statuses.className = "props props-bullets status-bullets";
+    const statusItems = [
+      `Действие: ${player.actionUsed ? "использовано" : "готово"}`,
+      `Молчание: ${player.mutedForCircle ? "до конца круга" : "нет"}`,
+      `Бонусы раскрытия: ${player.bonusRevealCredits || 0}`,
+      `Голосов против: ${voteCounts[player.id] || 0}`
+    ];
+    for (const text of statusItems) {
+      const item = document.createElement("li");
+      item.className = "status-line hint";
+      item.textContent = text;
+      statuses.append(item);
+    }
 
-    row.append(title, props, statuses);
+    row.append(props, statuses);
 
     if (state.phase === "voting" && state.meId !== player.id && player.isAlive) {
       const voteBtn = document.createElement("button");
@@ -587,11 +667,16 @@ socket.on("state:update", (state) => {
 
   if (state.lastPublicAction) {
     const a = state.lastPublicAction;
-    const who = a.targetName ? `${a.actorName} → ${a.targetName}` : a.actorName;
-    publicActionInfo.textContent = `Действие: ${who} — «${a.actionTitle}»`;
+    publicActionInfo.textContent = `Последнее: ${formatActionLine(a)}`;
+    if (a.at && a.at !== lastActionAt) {
+      lastActionAt = a.at;
+      showActionBanner(a);
+    }
   } else {
     publicActionInfo.textContent = "";
   }
+
+  renderActionLog(state);
 
   if (lastSpeakerId && state.currentSpeakerId && state.currentSpeakerId !== lastSpeakerId) {
     playTurnClick();

@@ -151,16 +151,63 @@ button:disabled {
   color: #d1d5db;
 }
 
+.props-bullets {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.props-bullets .prop-line,
+.props-bullets .status-line {
+  position: relative;
+  padding: 8px 10px 8px 22px;
+  background: #0f172a;
+  border: 1px solid #374151;
+  border-radius: 8px;
+}
+
+.props-bullets .prop-line::before,
+.props-bullets .status-line::before {
+  content: "•";
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  color: #60a5fa;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.status-bullets {
+  margin-top: 4px;
+}
+
+.status-bullets .status-line {
+  font-size: 13px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
 .prop-line .prop-label {
   font-size: 11px;
   text-transform: uppercase;
   color: #9ca3af;
+  margin-bottom: 4px;
 }
 
 .prop-line .prop-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: #f3f4f6;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.prop-line.reveal-highlight {
+  border-color: #22c55e;
+  background: #0e2a1c;
 }
 
 .locked {
@@ -346,6 +393,71 @@ select {
 .public-action {
   color: #fcd34d;
   font-weight: 600;
+}
+
+.action-log .action-log-item {
+  padding-left: 22px;
+}
+
+.action-log-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fcd34d;
+  margin-bottom: 4px;
+}
+
+.action-log-meta {
+  font-size: 13px;
+  color: #d1d5db;
+}
+
+.action-log-desc {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+.action-banner {
+  position: fixed;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(560px, 92vw);
+  background: #422006;
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.action-banner-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #fcd34d;
+  margin-bottom: 4px;
+}
+
+.action-banner-text {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.action-banner-desc {
+  font-size: 13px;
+  color: #fde68a;
+  margin-top: 6px;
+}
+
+.player-action-used {
+  margin: 8px 0;
+  padding: 8px 10px;
+  background: #422006;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #fcd34d;
 }
 
 .timer-bar {

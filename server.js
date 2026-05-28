@@ -38,6 +38,7 @@ const state = {
   globalTimer: { active: false, endsAt: null, durationSec: null },
   lastReveal: null,
   lastPublicAction: null,
+  actionLog: [],
   roundHint: ""
 };
 
@@ -206,6 +207,7 @@ function publicStateFor(socketId) {
     globalTimer: state.globalTimer,
     lastReveal: state.lastReveal,
     lastPublicAction: state.lastPublicAction,
+    actionLog: state.actionLog,
     roundHint: state.roundHint,
     turnRevealCount: state.turnRevealCount
   };
@@ -373,13 +375,17 @@ function endVoting() {
 }
 
 function recordPublicAction(actor, target, actionDef) {
-  state.lastPublicAction = {
+  const entry = {
     at: Date.now(),
     actorName: actor.nickname,
     targetName: target ? target.nickname : null,
     actionTitle: actionDef.title,
+    actionId: actionDef.id,
     description: actionDef.description
   };
+  state.lastPublicAction = entry;
+  state.actionLog.unshift(entry);
+  if (state.actionLog.length > 40) state.actionLog.length = 40;
 }
 
 function applyAction(actor, target, propertyKey) {
@@ -547,6 +553,7 @@ io.on("connection", (socket) => {
     state.roundHint = computeRoundHint(state.players.size);
     state.lastReveal = null;
     state.lastPublicAction = null;
+    state.actionLog = [];
     state.voting = { active: false, endsAt: null, votes: {} };
     clearVotingTimer();
 
@@ -709,6 +716,7 @@ io.on("connection", (socket) => {
     state.globalTimer = { active: false, endsAt: null, durationSec: null };
     state.lastReveal = null;
     state.lastPublicAction = null;
+    state.actionLog = [];
 
     for (const player of state.players.values()) {
       player.card = null;

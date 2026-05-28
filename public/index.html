@@ -80,6 +80,12 @@
         </div>
 
         <div class="panel">
+          <h2>Действия в партии</h2>
+          <p class="hint">Все использованные карты действий видны всем игрокам.</p>
+          <ul id="actionLog" class="props props-bullets action-log"></ul>
+        </div>
+
+        <div class="panel">
           <h2>Общий стол</h2>
           <div id="playersTable" class="players-table"></div>
         </div>
@@ -93,6 +99,7 @@
       </div>
     </div>
     <div id="timerBar" class="timer-bar hidden"></div>
+    <div id="actionBanner" class="action-banner hidden"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="./main.js"></script>
