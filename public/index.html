@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bunker Online</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Bunker Online</h1>
+      <p class="subtitle">Первая версия: лобби + карточки + раскрытие свойств</p>
+
+      <section id="joinSection" class="panel">
+        <label for="nickname">Никнейм</label>
+        <div class="row">
+          <input id="nickname" type="text" placeholder="Введите ник" maxlength="24" />
+          <button id="joinBtn">Войти</button>
+        </div>
+        <p id="joinError" class="error"></p>
+      </section>
+
+      <section id="gameSection" class="hidden">
+        <div class="panel">
+          <h2>Мои карточки</h2>
+          <p class="hint">Нажмите "Открыть", чтобы показать свойство всем игрокам.</p>
+          <div id="myCard" class="card-grid"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Общий стол</h2>
+          <div id="playersTable" class="players-table"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>
