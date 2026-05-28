@@ -52,6 +52,7 @@ const effectInfo = document.getElementById("effectInfo");
 const publicActionInfo = document.getElementById("publicActionInfo");
 const actionLogEl = document.getElementById("actionLog");
 const actionBanner = document.getElementById("actionBanner");
+const adminLobbyHint = document.getElementById("adminLobbyHint");
 const voteInfo = document.getElementById("voteInfo");
 const modeRevealBtn = document.getElementById("modeRevealBtn");
 const modeDiscussionBtn = document.getElementById("modeDiscussionBtn");
@@ -295,11 +296,25 @@ function renderPackChips(state) {
   }
 }
 
-function formatActionLine(entry) {
-  if (entry.targetName) {
-    return `${entry.actorName} → ${entry.targetName}: «${entry.actionTitle}»`;
+function addAdminPlayerActions(state, container, player) {
+  if (state.meId !== state.hostId) return;
+  if (!player.isAlive) {
+    const reviveBtn = document.createElement("button");
+    reviveBtn.className = "revive-btn";
+    reviveBtn.textContent = "Вернуть в игру";
+    reviveBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      socket.emit("host:revive-player", player.id);
+    });
+    container.append(reviveBtn);
   }
-  return `${entry.actorName}: «${entry.actionTitle}»`;
+}
+
+function formatActionLine(entry) {
+  const base = entry.targetName
+    ? `${entry.actorName} → ${entry.targetName}: «${entry.actionTitle}»`
+    : `${entry.actorName}: «${entry.actionTitle}»`;
+  return entry.reflected ? `${base} (отражено Уно)` : base;
 }
 
 function showActionBanner(entry) {
@@ -450,6 +465,7 @@ function renderLobbyPlayers(state) {
     });
 
     lobbyPlayers.append(tile);
+    addAdminPlayerActions(state, tile, player);
   }
 }
 
@@ -571,6 +587,7 @@ function renderTable(state) {
     }
 
     row.append(props, statuses);
+    addAdminPlayerActions(state, row, player);
 
     if (state.phase === "voting" && state.meId !== player.id && player.isAlive) {
       const voteBtn = document.createElement("button");
@@ -631,6 +648,7 @@ socket.on("state:update", (state) => {
     hostControls.querySelectorAll("button").forEach((btn) => btn.classList.remove("hidden"));
   }
   claimHostBtn.classList.toggle("hidden", isHost || Boolean(state.hostId));
+  if (adminLobbyHint) adminLobbyHint.classList.toggle("hidden", !isHost);
   renderPackChips(state);
 
   circleStatus.textContent = state.circleStatus || "";

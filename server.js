@@ -110,7 +110,8 @@ function createPlayer(socketId, nickname, avatarUrl) {
     flipVotesActive: false,
     protectPartnerId: null,
     speakInsteadTargetId: null,
-    sacrificeVoteBonus: false
+    sacrificeVoteBonus: false,
+    unoMarked: false
   };
 }
 
@@ -134,6 +135,7 @@ function resetPlayerForGame(player) {
   player.protectPartnerId = null;
   player.speakInsteadTargetId = null;
   player.sacrificeVoteBonus = false;
+  player.unoMarked = false;
 }
 
 function setBioAge(player, age) {
@@ -374,14 +376,15 @@ function endVoting() {
   broadcastState();
 }
 
-function recordPublicAction(actor, target, actionDef) {
+function recordPublicAction(actor, target, actionDef, extra = {}) {
   const entry = {
     at: Date.now(),
     actorName: actor.nickname,
     targetName: target ? target.nickname : null,
     actionTitle: actionDef.title,
     actionId: actionDef.id,
-    description: actionDef.description
+    description: actionDef.description,
+    ...extra
   };
   state.lastPublicAction = entry;
   state.actionLog.unshift(entry);
@@ -428,6 +431,7 @@ function applyAction(actor, target, propertyKey) {
       setBioAge(target, 70);
       break;
     case "baby_elixir":
+    case "teen_elixir":
       setBioAge(target, 14);
       break;
     case "copy_profession":
@@ -437,6 +441,7 @@ function applyAction(actor, target, propertyKey) {
       break;
     case "job_cut":
       target.card.profession = "Безработный";
+      target.card.extra = "Потерял все знания профессии";
       break;
     case "heal":
       if (target.card.health && !target.card.health.includes("здоров")) {
@@ -465,6 +470,9 @@ function applyAction(actor, target, propertyKey) {
       target.card.phobia = "Нет фобий";
       target.revealed.phobia = true;
       target.revealedAt.phobia = Date.now();
+      break;
+    case "uno":
+      target.unoMarked = true;
       break;
     default:
       return "Неизвестное действие.";
@@ -660,6 +668,13 @@ io.on("connection", (socket) => {
       target = actor;
     }
 
+    let reflected = false;
+    if (actor.unoMarked && def.id !== "uno") {
+      actor.unoMarked = false;
+      target = actor;
+      reflected = true;
+    }
+
     const err = applyAction(actor, target, propertyKey);
     if (err) {
       socket.emit("action:error", err);
@@ -667,7 +682,9 @@ io.on("connection", (socket) => {
     }
 
     actor.actionUsed = true;
-    recordPublicAction(actor, def.needsTarget === false ? null : target, def);
+    recordPublicAction(actor, def.needsTarget === false ? null : target, def, {
+      reflected
+    });
     state.lastReveal = null;
 
     sendPrivateCards(actor);
@@ -729,6 +746,7 @@ io.on("connection", (socket) => {
       player.bonusRevealCredits = 0;
       player.blockedProperties = {};
       player.mustForgetProperty = false;
+      player.unoMarked = false;
     }
 
     broadcastState();

@@ -460,6 +460,14 @@ select {
   color: #fcd34d;
 }
 
+.revive-btn {
+  margin-top: 8px;
+  width: 100%;
+  background: #15803d;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
 .timer-bar {
   position: fixed;
   left: 50%;
