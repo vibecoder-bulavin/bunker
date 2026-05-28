@@ -8,13 +8,15 @@
   </head>
   <body>
     <main class="container">
-      <h1>Bunker Online</h1>
-      <p class="subtitle">Первая версия: лобби + карточки + раскрытие свойств</p>
+      <h1>Online Drochiknya Bunker</h1>
+      <p class="subtitle">Выживет хитрейший, сильнейший умрет потому что не умеет пиздеть</p>
 
       <section id="joinSection" class="panel">
-        <label for="nickname">Никнейм</label>
-        <div class="row">
+        <div class="auth-stack">
+          <label for="nickname">Никнейм</label>
           <input id="nickname" type="text" placeholder="Введите ник" maxlength="24" />
+          <label for="avatarUrl">Фото</label>
+          <input id="avatarUrl" type="text" placeholder="URL фото (необязательно)" />
           <button id="joinBtn">Войти</button>
         </div>
         <p id="joinError" class="error"></p>
@@ -22,9 +24,59 @@
 
       <section id="gameSection" class="hidden">
         <div class="panel">
+          <h2>Лобби и статус</h2>
+          <p id="circleStatus" class="circle-status"></p>
+          <div class="status-grid">
+            <div class="status-item">
+              <div id="turnLabel" class="status-label">Сейчас говорит</div>
+              <div id="turnInfo" class="status-value"></div>
+            </div>
+            <div class="status-item">
+              <div id="turnOpenLabel" class="status-label">Открыто в этом ходу</div>
+              <div id="turnOpenInfo" class="status-value"></div>
+            </div>
+          </div>
+          <p id="effectInfo" class="hint"></p>
+          <p id="publicActionInfo" class="public-action"></p>
+          <p id="voteInfo" class="hint"></p>
+          <button id="claimHostBtn">Стать админом</button>
+          <div id="hostControls" class="controls hidden">
+            <div class="row wrap">
+              <label>Паки (можно несколько)</label>
+              <div id="packChips" class="chips"></div>
+            </div>
+            <div class="row wrap">
+              <button id="startGameBtn">Запустить мир</button>
+              <button id="modeRevealBtn">Круг: вскрытие</button>
+              <button id="modeDiscussionBtn">Круг: обсуждение</button>
+              <button id="nextTurnBtn">Следующий ход</button>
+              <button id="startVotingBtn">Голосование (60с)</button>
+              <button id="restartBtn">Перезапуск</button>
+            </div>
+            <div class="row wrap">
+              <button class="timer-btn" data-seconds="30">Таймер 30с</button>
+              <button class="timer-btn" data-seconds="45">Таймер 45с</button>
+              <button class="timer-btn" data-seconds="60">Таймер 60с</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="top-row">
+          <div class="panel world-panel">
+            <h2>Мир партии</h2>
+            <div id="worldInfo" class="world-grid"></div>
+          </div>
+          <div class="panel lobby-panel">
+            <h2>Кого ждет апокалипсис</h2>
+            <div id="lobbyPlayers" class="lobby-grid"></div>
+          </div>
+        </div>
+
+        <div class="panel">
           <h2>Мои карточки</h2>
-          <p class="hint">Нажмите "Открыть", чтобы показать свойство всем игрокам.</p>
+          <p class="hint">Открывать свойства может текущий говорящий. После открытия есть 5 секунд на отмену.</p>
           <div id="myCard" class="card-grid"></div>
+          <div id="myActionCard" class="action-card"></div>
         </div>
 
         <div class="panel">
@@ -33,6 +85,14 @@
         </div>
       </section>
     </main>
+    <div id="playerModal" class="modal hidden">
+      <div class="modal-card">
+        <button id="closeModalBtn">Закрыть</button>
+        <h3 id="modalPlayerName"></h3>
+        <div id="modalPlayerStats" class="props"></div>
+      </div>
+    </div>
+    <div id="timerBar" class="timer-bar hidden"></div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="./main.js"></script>

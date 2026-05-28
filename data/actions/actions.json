@@ -1,0 +1,154 @@
+[
+  {
+    "id": "silence_mouth",
+    "title": "Закрыть рот",
+    "description": "Игрок молчит до конца текущего круга.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "swap_property",
+    "title": "Поменяться характеристикой",
+    "description": "Обмен одной выбранной характеристикой с игроком.",
+    "needsTarget": true,
+    "needsProperty": true,
+    "allowSelf": false
+  },
+  {
+    "id": "gangrene",
+    "title": "Заразить гангреной",
+    "description": "У цели здоровье становится «Гангрена».",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "cancel_action",
+    "title": "Отменить действие",
+    "description": "Отменяет неиспользованную карту действия другого игрока.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "extra_vote",
+    "title": "Дополнительный голос",
+    "description": "На следующем голосовании твой голос считается дважды (один раз).",
+    "needsTarget": false,
+    "needsProperty": false,
+    "allowSelf": true
+  },
+  {
+    "id": "force_reveal",
+    "title": "Заставить открыть",
+    "description": "В свой следующий ход цель должна открыть ещё одну характеристику.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "forget_property",
+    "title": "Забыть характеристику",
+    "description": "Цель в свой ход выбирает одну открытую характеристику — она становится неактивной.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "youth_elixir",
+    "title": "Эликсир молодости",
+    "description": "Возраст цели становится 30 лет.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": true
+  },
+  {
+    "id": "old_elixir",
+    "title": "Эликсир старости",
+    "description": "Возраст цели становится 70 лет.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": true
+  },
+  {
+    "id": "baby_elixir",
+    "title": "Эликсир младенца",
+    "description": "Возраст цели становится 14 лет.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": true
+  },
+  {
+    "id": "copy_profession",
+    "title": "Копирование профессии",
+    "description": "Ты копируешь профессию выбранного игрока.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "job_cut",
+    "title": "Сокращение",
+    "description": "Цель теряет профессию и становится безработной.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "heal",
+    "title": "Исцеление",
+    "description": "Лечит болезнь у цели (можно на себя).",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": true
+  },
+  {
+    "id": "steal_mic",
+    "title": "Отдайте микрофон",
+    "description": "В следующий раз, когда цель должна говорить, говоришь ты.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "sacrifice",
+    "title": "Самопожертвование",
+    "description": "Цель получает +1 голос в этом кругу голосования, ты получаешь иммунитет к исключению.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "body_swap",
+    "title": "Обмен телами",
+    "description": "До конца круга вы обязаны защищать друг друга (связка).",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "flip_vote",
+    "title": "Переворот",
+    "description": "Если против тебя больше всего голосов — вылетает игрок с наименьшим числом голосов.",
+    "needsTarget": false,
+    "needsProperty": false,
+    "allowSelf": true
+  },
+  {
+    "id": "interrogation",
+    "title": "Допрос",
+    "description": "Цель обязана ответить на 3 вопроса правду (на словах).",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": false
+  },
+  {
+    "id": "anesthesia",
+    "title": "Анастезия",
+    "description": "Цель теряет фобию до конца игры.",
+    "needsTarget": true,
+    "needsProperty": false,
+    "allowSelf": true
+  }
+]
