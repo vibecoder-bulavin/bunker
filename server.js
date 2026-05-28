@@ -125,12 +125,8 @@ function ageWord(age) {
 
 function setBioAge(player, age) {
   const parts = String(player.card.bio || "").split(", ").map((part) => part.trim());
-  if (parts.length >= 2) {
-    parts[1] = `${age} ${ageWord(age)}`;
-    player.card.bio = parts.join(", ");
-    return;
-  }
-  player.card.bio = `Неизвестно, ${age} ${ageWord(age)}`;
+  const gender = parts[0] === "Женщина" || parts[0] === "Мужчина" ? parts[0] : "Человек";
+  player.card.bio = `${gender}, ${age} ${ageWord(age)}`;
 }
 
 function getActionDef(actionId) {
@@ -224,8 +220,10 @@ function assertHost(socket, actionName) {
 }
 
 function pickWorld() {
+  const location = randomFromArray(worldData.locations);
   return {
-    location: randomFromArray(worldData.locations),
+    location: location.name,
+    bunkerRooms: location.rooms,
     supplies: randomFromArray(worldData.supplies),
     apocalypse: randomFromArray(worldData.apocalypses),
     stayDuration: randomFromArray(worldData.durations)

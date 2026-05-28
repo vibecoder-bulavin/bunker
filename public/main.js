@@ -48,7 +48,7 @@ const turnLabel = document.getElementById("turnLabel");
 const turnInfo = document.getElementById("turnInfo");
 const turnOpenLabel = document.getElementById("turnOpenLabel");
 const turnOpenInfo = document.getElementById("turnOpenInfo");
-const turnOrderInfo = document.getElementById("turnOrderInfo");
+const lobbyTurnOrder = document.getElementById("lobbyTurnOrder");
 const roundHintInfo = document.getElementById("roundHintInfo");
 const circleStatus = document.getElementById("circleStatus");
 const effectInfo = document.getElementById("effectInfo");
@@ -77,7 +77,10 @@ let lastPhase = null;
 let lastTimerKey = "none";
 let lastCountdownSecond = null;
 let lastActionAt = null;
+let lastRevealAt = null;
 let actionBannerTimeout = null;
+const votingEndSound = new Audio("/sounds/voting-end.ogg");
+votingEndSound.preload = "auto";
 
 function syncExpiredTimers(state) {
   let changed = false;
@@ -93,14 +96,6 @@ function syncExpiredTimers(state) {
   }
 
   return changed ? next : state;
-}
-
-function formatTurnOrder(state) {
-  if (!state.turnOrder?.length) return "—";
-  return state.turnOrder
-    .map((id) => state.players.find((player) => player.id === id)?.nickname)
-    .filter(Boolean)
-    .join(" → ");
 }
 
 function ensureAudio() {
@@ -141,6 +136,18 @@ function playTick(urgency) {
 function playBell() {
   beep(880, 0.15, "sine", 0.04);
   setTimeout(() => beep(1320, 0.18, "sine", 0.04), 170);
+}
+
+function playVotingEnd() {
+  ensureAudio();
+  votingEndSound.currentTime = 0;
+  votingEndSound.play().catch(() => playBell());
+}
+
+function playReveal() {
+  beep(520, 0.05, "triangle", 0.035);
+  setTimeout(() => beep(780, 0.07, "triangle", 0.04), 55);
+  setTimeout(() => beep(1040, 0.09, "sine", 0.035), 120);
 }
 
 function avatarOrFallback(url) {
@@ -449,7 +456,7 @@ function updateLiveCounters() {
     timerBar.classList.add("hidden");
   }
 
-  if (lastTimerKey !== "none" && timerKey === "none") {
+  if (lastTimerKey === "global" && timerKey === "none") {
     playBell();
   }
   lastTimerKey = timerKey;
@@ -470,13 +477,37 @@ function updateLiveCounters() {
   lastCountdownSecond = sec;
 }
 
+function renderLobbyTurnOrder(state) {
+  if (!lobbyTurnOrder) return;
+  if (!state.turnOrder?.length || state.phase === "lobby") {
+    lobbyTurnOrder.textContent = "";
+    return;
+  }
+  const names = state.turnOrder
+    .map((id, index) => {
+      const player = state.players.find((p) => p.id === id);
+      return player ? `${index + 1}. ${player.nickname}` : null;
+    })
+    .filter(Boolean);
+  lobbyTurnOrder.textContent = names.length ? `По очереди: ${names.join(" → ")}` : "";
+}
+
 function renderLobbyPlayers(state) {
+  renderLobbyTurnOrder(state);
   lobbyPlayers.innerHTML = "";
   for (const player of state.players) {
     const tile = document.createElement("div");
     tile.className = "lobby-tile";
     if (!player.isAlive) tile.classList.add("eliminated");
     if (player.id === state.currentSpeakerId) tile.classList.add("speaking");
+
+    const orderIndex = state.turnOrder.indexOf(player.id);
+    if (orderIndex >= 0 && state.phase !== "lobby") {
+      const orderBadge = document.createElement("span");
+      orderBadge.className = "turn-order-badge";
+      orderBadge.textContent = String(orderIndex + 1);
+      tile.append(orderBadge);
+    }
 
     const avatar = avatarOrFallback(player.avatarUrl);
     avatar.classList.add("lobby-avatar");
@@ -533,7 +564,8 @@ function renderWorld(state) {
     return;
   }
   const lines = [
-    { label: "Локация", value: state.world.location },
+    { label: "Бункер", value: state.world.location },
+    { label: "Комнаты и секции", value: state.world.bunkerRooms },
     { label: "Наполнение", value: state.world.supplies },
     { label: "Апокалипсис", value: state.world.apocalypse },
     { label: "Срок в бункере", value: state.world.stayDuration }
@@ -712,7 +744,6 @@ socket.on("state:update", (state) => {
 
   circleStatus.textContent = state.circleStatus || "";
   if (roundHintInfo) roundHintInfo.textContent = state.roundHint || "";
-  if (turnOrderInfo) turnOrderInfo.textContent = formatTurnOrder(state);
 
   const isDiscussion = state.roundMode === "discussion" || state.phase === "voting";
   const speaker = state.players.find((player) => player.id === state.currentSpeakerId);
@@ -726,15 +757,7 @@ socket.on("state:update", (state) => {
     turnLabel.textContent = "Сейчас говорит";
     turnInfo.textContent = speaker ? speaker.nickname : "Ожидание";
     turnOpenLabel.textContent = "Открыто в этом ходу";
-    const recommended = speaker && !speaker.mutedForCircle ? 1 + (speaker.bonusRevealCredits || 0) : 0;
-    if (speaker) {
-      const opened = `${state.turnRevealCount}`;
-      turnOpenInfo.textContent = recommended
-        ? `${opened} (рекомендуется ${recommended})`
-        : `${opened} (рекомендаций нет — молчит)`;
-    } else {
-      turnOpenInfo.textContent = "";
-    }
+    turnOpenInfo.textContent = speaker ? String(state.turnRevealCount) : "";
   }
 
   if (speaker && !isDiscussion) {
@@ -765,6 +788,13 @@ socket.on("state:update", (state) => {
   }
   if (lastPhase && lastPhase !== "voting" && state.phase === "voting") {
     playVotingStart();
+  }
+  if (lastPhase === "voting" && state.phase === "in_game") {
+    playVotingEnd();
+  }
+  if (state.lastReveal?.at && state.lastReveal.at !== lastRevealAt) {
+    lastRevealAt = state.lastReveal.at;
+    playReveal();
   }
   lastSpeakerId = state.currentSpeakerId;
   lastPhase = state.phase;
