@@ -39,7 +39,6 @@ const lobbyPlayers = document.getElementById("lobbyPlayers");
 const hostControls = document.getElementById("hostControls");
 const reviveList = document.getElementById("reviveList");
 const eliminateList = document.getElementById("eliminateList");
-const packChips = document.getElementById("packChips");
 const startGameBtn = document.getElementById("startGameBtn");
 const nextTurnBtn = document.getElementById("nextTurnBtn");
 const startVotingBtn = document.getElementById("startVotingBtn");
@@ -49,6 +48,8 @@ const turnLabel = document.getElementById("turnLabel");
 const turnInfo = document.getElementById("turnInfo");
 const turnOpenLabel = document.getElementById("turnOpenLabel");
 const turnOpenInfo = document.getElementById("turnOpenInfo");
+const turnOrderInfo = document.getElementById("turnOrderInfo");
+const roundHintInfo = document.getElementById("roundHintInfo");
 const circleStatus = document.getElementById("circleStatus");
 const effectInfo = document.getElementById("effectInfo");
 const publicActionInfo = document.getElementById("publicActionInfo");
@@ -70,7 +71,6 @@ let myCardData = null;
 let myActionData = null;
 let lastState = null;
 let timerTicker = null;
-let draftPacks = [];
 let audioCtx = null;
 let lastSpeakerId = null;
 let lastPhase = null;
@@ -78,11 +78,30 @@ let lastTimerKey = "none";
 let lastCountdownSecond = null;
 let lastActionAt = null;
 let actionBannerTimeout = null;
-const packTitles = {
-  classic: "Классика",
-  science: "Научный",
-  chaos: "Хаос"
-};
+
+function syncExpiredTimers(state) {
+  let changed = false;
+  const next = { ...state, voting: { ...state.voting }, globalTimer: { ...state.globalTimer } };
+
+  if (next.voting.active && next.voting.endsAt && next.voting.endsAt <= Date.now()) {
+    next.voting = { active: false, endsAt: null, votes: {} };
+    changed = true;
+  }
+  if (next.globalTimer.active && next.globalTimer.endsAt && next.globalTimer.endsAt <= Date.now()) {
+    next.globalTimer = { active: false, durationSec: null, endsAt: null };
+    changed = true;
+  }
+
+  return changed ? next : state;
+}
+
+function formatTurnOrder(state) {
+  if (!state.turnOrder?.length) return "—";
+  return state.turnOrder
+    .map((id) => state.players.find((player) => player.id === id)?.nickname)
+    .filter(Boolean)
+    .join(" → ");
+}
 
 function ensureAudio() {
   if (!audioCtx) {
@@ -270,34 +289,6 @@ function renderForgetPicker(state, me) {
   myActionCard.prepend(box);
 }
 
-function renderPackChips(state) {
-  const isHost = state.meId === state.hostId;
-  if (!draftPacks.length) {
-    draftPacks = [...state.selectedPacks];
-  }
-
-  packChips.innerHTML = "";
-  for (const packName of state.availablePacks) {
-    const chip = document.createElement("button");
-    chip.className = "chip";
-    if (draftPacks.includes(packName)) chip.classList.add("active");
-    chip.textContent = packTitles[packName] || packName;
-    chip.disabled = !isHost || state.phase !== "lobby";
-    chip.addEventListener("click", () => {
-      if (draftPacks.includes(packName)) {
-        draftPacks = draftPacks.filter((name) => name !== packName);
-      } else {
-        draftPacks.push(packName);
-      }
-      if (!draftPacks.length) {
-        draftPacks = [packName];
-      }
-      renderPackChips(state);
-    });
-    packChips.append(chip);
-  }
-}
-
 function renderEliminatePanel(state) {
   if (!eliminateList) return;
   eliminateList.innerHTML = "";
@@ -437,8 +428,10 @@ function remainingText(endAt) {
 
 function updateLiveCounters() {
   if (!lastState) return;
-  const votingActive = lastState.voting.active;
-  const commonActive = lastState.globalTimer.active;
+  lastState = syncExpiredTimers(lastState);
+
+  const votingActive = lastState.voting.active && lastState.voting.endsAt > Date.now();
+  const commonActive = lastState.globalTimer.active && lastState.globalTimer.endsAt > Date.now();
   let timerKey = "none";
   let endsAt = null;
 
@@ -542,7 +535,8 @@ function renderWorld(state) {
   const lines = [
     { label: "Локация", value: state.world.location },
     { label: "Наполнение", value: state.world.supplies },
-    { label: "Апокалипсис", value: state.world.apocalypse }
+    { label: "Апокалипсис", value: state.world.apocalypse },
+    { label: "Срок в бункере", value: state.world.stayDuration }
   ];
   for (const item of lines) {
     const line = document.createElement("div");
@@ -697,7 +691,7 @@ socket.on("action:private", (actionCard) => {
 });
 
 socket.on("state:update", (state) => {
-  lastState = state;
+  lastState = syncExpiredTimers(state);
   if (!joined) {
     joined = true;
     joinSection.classList.add("hidden");
@@ -715,9 +709,10 @@ socket.on("state:update", (state) => {
   if (adminLobbyHint) adminLobbyHint.classList.toggle("hidden", !isHost);
   renderEliminatePanel(state);
   renderRevivePanel(state);
-  renderPackChips(state);
 
   circleStatus.textContent = state.circleStatus || "";
+  if (roundHintInfo) roundHintInfo.textContent = state.roundHint || "";
+  if (turnOrderInfo) turnOrderInfo.textContent = formatTurnOrder(state);
 
   const isDiscussion = state.roundMode === "discussion" || state.phase === "voting";
   const speaker = state.players.find((player) => player.id === state.currentSpeakerId);
@@ -731,18 +726,21 @@ socket.on("state:update", (state) => {
     turnLabel.textContent = "Сейчас говорит";
     turnInfo.textContent = speaker ? speaker.nickname : "Ожидание";
     turnOpenLabel.textContent = "Открыто в этом ходу";
-    const requiredOpenCount = speaker
-      ? speaker.mutedForCircle
-        ? 0
-        : 1 + (speaker.bonusRevealCredits || 0)
-      : 0;
-    turnOpenInfo.textContent = speaker ? `${state.turnRevealCount} из ${requiredOpenCount}` : "";
+    const recommended = speaker && !speaker.mutedForCircle ? 1 + (speaker.bonusRevealCredits || 0) : 0;
+    if (speaker) {
+      const opened = `${state.turnRevealCount}`;
+      turnOpenInfo.textContent = recommended
+        ? `${opened} (рекомендуется ${recommended})`
+        : `${opened} (рекомендаций нет — молчит)`;
+    } else {
+      turnOpenInfo.textContent = "";
+    }
   }
 
   if (speaker && !isDiscussion) {
     const effects = [];
     if (speaker.mutedForCircle) effects.push("молчит до конца круга");
-    if (speaker.bonusRevealCredits > 0) effects.push("должен открыть +1 характеристику");
+    if (speaker.bonusRevealCredits > 0) effects.push("рекомендуется открыть +1 характеристику");
     if (speaker.mustForgetProperty) effects.push("должен забыть одну открытую характеристику");
     effectInfo.textContent = effects.length ? `Эффекты хода: ${effects.join("; ")}` : "";
   } else {
@@ -781,10 +779,7 @@ socket.on("state:update", (state) => {
   updateLiveCounters();
 });
 
-startGameBtn.addEventListener("click", () => {
-  socket.emit("host:set-packs", draftPacks);
-  socket.emit("host:start-game");
-});
+startGameBtn.addEventListener("click", () => socket.emit("host:start-game"));
 startVotingBtn.addEventListener("click", () => socket.emit("host:start-voting"));
 modeRevealBtn.addEventListener("click", () => socket.emit("host:set-round-mode", "reveal"));
 modeDiscussionBtn.addEventListener("click", () => socket.emit("host:set-round-mode", "discussion"));

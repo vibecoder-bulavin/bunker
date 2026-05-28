@@ -10,16 +10,16 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 const cardKeys = ["profession", "health", "bio", "hobby", "phobia", "extra", "traits", "fact", "secret"];
-const packDir = path.join(__dirname, "data", "packs");
+const cardPool = loadJson(path.join(__dirname, "data", "packs", "default.json"));
 const worldDir = path.join(__dirname, "data", "world");
 const actionsPath = path.join(__dirname, "data", "actions", "actions.json");
 
-const availablePacks = loadPacks();
 const actionCardsPool = loadJson(actionsPath);
 const worldData = {
   locations: loadJson(path.join(worldDir, "locations.json")),
   supplies: loadJson(path.join(worldDir, "supplies.json")),
-  apocalypses: loadJson(path.join(worldDir, "apocalypses.json"))
+  apocalypses: loadJson(path.join(worldDir, "apocalypses.json")),
+  durations: loadJson(path.join(worldDir, "durations.json"))
 };
 
 const state = {
@@ -27,7 +27,6 @@ const state = {
   phase: "lobby",
   roundMode: "reveal",
   hostId: null,
-  selectedPacks: ["classic"],
   players: new Map(),
   turnOrder: [],
   currentTurnIndex: 0,
@@ -49,37 +48,14 @@ function loadJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
 
-function loadPacks() {
-  const packs = {};
-  const files = fs.readdirSync(packDir).filter((file) => file.endsWith(".json"));
-  for (const file of files) {
-    const name = path.basename(file, ".json");
-    packs[name] = loadJson(path.join(packDir, file));
-  }
-  return packs;
-}
-
 function randomFromArray(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
-function getMergedPool(packNames) {
-  const merged = Object.fromEntries(cardKeys.map((key) => [key, []]));
-  for (const packName of packNames) {
-    const pack = availablePacks[packName];
-    if (!pack) continue;
-    for (const key of cardKeys) {
-      merged[key].push(...(pack[key] || []));
-    }
-  }
-  return merged;
-}
-
-function buildPlayerCard(selectedPacks) {
-  const pool = getMergedPool(selectedPacks);
+function buildPlayerCard() {
   const card = {};
   for (const key of cardKeys) {
-    card[key] = randomFromArray(pool[key] || []);
+    card[key] = randomFromArray(cardPool[key] || []);
   }
   return card;
 }
@@ -138,8 +114,23 @@ function resetPlayerForGame(player) {
   player.unoMarked = false;
 }
 
+function ageWord(age) {
+  const mod10 = age % 10;
+  const mod100 = age % 100;
+  if (mod100 >= 11 && mod100 <= 14) return "лет";
+  if (mod10 === 1) return "год";
+  if (mod10 >= 2 && mod10 <= 4) return "года";
+  return "лет";
+}
+
 function setBioAge(player, age) {
-  player.card.bio = `${age} лет`;
+  const parts = String(player.card.bio || "").split(", ").map((part) => part.trim());
+  if (parts.length >= 2) {
+    parts[1] = `${age} ${ageWord(age)}`;
+    player.card.bio = parts.join(", ");
+    return;
+  }
+  player.card.bio = `Неизвестно, ${age} ${ageWord(age)}`;
 }
 
 function getActionDef(actionId) {
@@ -199,8 +190,6 @@ function publicStateFor(socketId) {
     circleStatus: circleStatusLabel(),
     hostId: state.hostId,
     meId: socketId,
-    selectedPacks: state.selectedPacks,
-    availablePacks: Object.keys(availablePacks),
     players: Array.from(state.players.values()).map(getPlayerView),
     turnOrder: state.turnOrder,
     currentSpeakerId: state.currentSpeakerId,
@@ -238,7 +227,8 @@ function pickWorld() {
   return {
     location: randomFromArray(worldData.locations),
     supplies: randomFromArray(worldData.supplies),
-    apocalypse: randomFromArray(worldData.apocalypses)
+    apocalypse: randomFromArray(worldData.apocalypses),
+    stayDuration: randomFromArray(worldData.durations)
   };
 }
 
@@ -508,22 +498,6 @@ io.on("connection", (socket) => {
     broadcastState();
   });
 
-  socket.on("host:set-packs", (packNames) => {
-    if (!assertHost(socket, "выбор паков")) return;
-    if (state.phase !== "lobby") {
-      socket.emit("action:error", "Паки меняются только в лобби.");
-      return;
-    }
-    const unique = [...new Set(Array.isArray(packNames) ? packNames : [])];
-    const valid = unique.filter((name) => availablePacks[name]);
-    if (!valid.length) {
-      socket.emit("action:error", "Выбери минимум один валидный пак.");
-      return;
-    }
-    state.selectedPacks = valid;
-    broadcastState();
-  });
-
   socket.on("host:transfer", (targetId) => {
     if (!assertHost(socket, "передача хоста")) return;
     if (!state.players.has(targetId)) return;
@@ -575,7 +549,7 @@ io.on("connection", (socket) => {
     clearVotingTimer();
 
     for (const player of state.players.values()) {
-      player.card = buildPlayerCard(state.selectedPacks);
+      player.card = buildPlayerCard();
       resetPlayerForGame(player);
       sendPrivateCards(player);
     }
@@ -612,12 +586,6 @@ io.on("connection", (socket) => {
     }
     if (player.blockedProperties[propertyName]) {
       socket.emit("action:error", "Эта характеристика заблокирована.");
-      return;
-    }
-
-    const revealLimit = 1 + player.bonusRevealCredits;
-    if (state.turnRevealCount >= revealLimit) {
-      socket.emit("action:error", "Лимит раскрытий на этот ход исчерпан.");
       return;
     }
 
@@ -730,7 +698,7 @@ io.on("connection", (socket) => {
   socket.on("host:restart", () => {
     if (!assertHost(socket, "перезапуск")) return;
     clearVotingTimer();
-    clearGlobalTimer();
+    finishGlobalTimer(false);
 
     state.phase = "lobby";
     state.roundMode = "reveal";
@@ -765,16 +733,13 @@ io.on("connection", (socket) => {
     if (!assertHost(socket, "запуск таймера")) return;
     if (![30, 45, 60].includes(durationSec)) return;
 
+    finishGlobalTimer(false);
     state.globalTimer = {
       active: true,
       durationSec,
       endsAt: Date.now() + durationSec * 1000
     };
-    clearGlobalTimer();
-    globalTimerTimeout = setTimeout(() => {
-      state.globalTimer = { active: false, durationSec: null, endsAt: null };
-      broadcastState();
-    }, durationSec * 1000);
+    globalTimerTimeout = setTimeout(() => finishGlobalTimer(true), durationSec * 1000);
     broadcastState();
   });
 
@@ -805,6 +770,12 @@ function clearGlobalTimer() {
     clearTimeout(globalTimerTimeout);
     globalTimerTimeout = null;
   }
+}
+
+function finishGlobalTimer(broadcast) {
+  clearGlobalTimer();
+  state.globalTimer = { active: false, durationSec: null, endsAt: null };
+  if (broadcast) broadcastState();
 }
 
 app.use(express.static(path.join(__dirname, "public")));

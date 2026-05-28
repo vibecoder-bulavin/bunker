@@ -35,16 +35,17 @@
               <div id="turnOpenLabel" class="status-label">Открыто в этом ходу</div>
               <div id="turnOpenInfo" class="status-value"></div>
             </div>
+            <div class="status-item">
+              <div id="turnOrderLabel" class="status-label">Порядок ходов</div>
+              <div id="turnOrderInfo" class="status-value"></div>
+            </div>
           </div>
+          <p id="roundHintInfo" class="hint"></p>
           <p id="effectInfo" class="hint"></p>
           <p id="publicActionInfo" class="public-action"></p>
           <p id="voteInfo" class="hint"></p>
           <button id="claimHostBtn">Стать админом</button>
           <div id="hostControls" class="controls hidden">
-            <div class="row wrap">
-              <label>Паки (можно несколько)</label>
-              <div id="packChips" class="chips"></div>
-            </div>
             <div class="row wrap">
               <button id="startGameBtn">Запустить мир</button>
               <button id="modeRevealBtn">Круг: вскрытие</button>
@@ -83,7 +84,7 @@
 
         <div class="panel">
           <h2>Мои карточки</h2>
-          <p class="hint">Открывать свойства может текущий говорящий. После открытия есть 5 секунд на отмену.</p>
+          <p class="hint">Открывать свойства может текущий говорящий. Рекомендуется 1–2 характеристики за ход. После открытия есть 5 секунд на отмену.</p>
           <div id="myCard" class="card-grid"></div>
           <div id="myActionCard" class="action-card"></div>
         </div>
